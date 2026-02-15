@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/term"
 
 	"github.com/goodtune/pac-proxy/internal/logging"
 	"github.com/goodtune/pac-proxy/internal/metrics"
@@ -41,8 +42,14 @@ func main() {
 	// Setup logger
 	logger, err := logging.NewSyslogLogger()
 	if err != nil {
-		// Fall back to stderr
-		logger = slog.New(slog.NewJSONHandler(os.Stderr, nil))
+		// Fall back to stderr with TTY-aware handler
+		var handler slog.Handler
+		if term.IsTerminal(int(os.Stderr.Fd())) {
+			handler = slog.NewTextHandler(os.Stderr, nil)
+		} else {
+			handler = slog.NewJSONHandler(os.Stderr, nil)
+		}
+		logger = slog.New(handler)
 		logger.Warn("syslog unavailable, logging to stderr", "error", err)
 	}
 
