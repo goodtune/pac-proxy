@@ -1,0 +1,14 @@
+[Unit]
+Description=PAC-Aware HTTP/HTTPS Forward Proxy
+After=network.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/sysconfig/pac
+ExecStart=/usr/bin/pac-proxy
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

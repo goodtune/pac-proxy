@@ -1,0 +1,29 @@
+version: 2
+
+builds:
+  - main: ./cmd/pac-proxy
+    binary: pac-proxy
+    goos:
+      - linux
+    goarch:
+      - amd64
+
+nfpms:
+  - package_name: pac-proxy
+    vendor: ""
+    homepage: ""
+    maintainer: "pac-proxy maintainers"
+    description: PAC-aware HTTP/HTTPS forward proxy server
+    license: MIT
+    formats:
+      - rpm
+    contents:
+      - src: packaging/pac-proxy.service
+        dst: /usr/lib/systemd/system/pac-proxy.service
+      - src: packaging/pac.sysconfig
+        dst: /etc/sysconfig/pac
+        type: config|noreplace
+    scripts:
+      postinstall: |
+        systemctl daemon-reload
+        systemctl enable pac-proxy.service
