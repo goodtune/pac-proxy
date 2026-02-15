@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/gary/pac-proxy/internal/logging"
-	"github.com/gary/pac-proxy/internal/metrics"
+	"github.com/goodtune/pac-proxy/internal/logging"
+	"github.com/goodtune/pac-proxy/internal/metrics"
 )
 
 // Hop-by-hop headers that must not be forwarded.

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gary/pac-proxy/internal/logging"
+	"github.com/goodtune/pac-proxy/internal/logging"
 )
 
 func TestLogRequest(t *testing.T) {

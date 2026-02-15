@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gary/pac-proxy/internal/pac"
+	"github.com/goodtune/pac-proxy/internal/pac"
 )
 
 const testPAC = `

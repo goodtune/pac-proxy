@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	"github.com/gary/pac-proxy/internal/pac"
-	"github.com/gary/pac-proxy/internal/proxy"
+	"github.com/goodtune/pac-proxy/internal/pac"
+	"github.com/goodtune/pac-proxy/internal/proxy"
 )
 
 func TestPacAdapter(t *testing.T) {

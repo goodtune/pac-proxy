@@ -1,4 +1,4 @@
-module github.com/gary/pac-proxy
+module github.com/goodtune/pac-proxy
 
 go 1.25.6
 

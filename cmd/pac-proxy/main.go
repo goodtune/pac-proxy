@@ -12,10 +12,10 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/gary/pac-proxy/internal/logging"
-	"github.com/gary/pac-proxy/internal/metrics"
-	"github.com/gary/pac-proxy/internal/pac"
-	"github.com/gary/pac-proxy/internal/proxy"
+	"github.com/goodtune/pac-proxy/internal/logging"
+	"github.com/goodtune/pac-proxy/internal/metrics"
+	"github.com/goodtune/pac-proxy/internal/pac"
+	"github.com/goodtune/pac-proxy/internal/proxy"
 )
 
 type pacAdapter struct {

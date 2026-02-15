@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gary/pac-proxy/internal/logging"
-	"github.com/gary/pac-proxy/internal/metrics"
+	"github.com/goodtune/pac-proxy/internal/logging"
+	"github.com/goodtune/pac-proxy/internal/metrics"
 )
 
 func (h *Handler) handleTunnel(w http.ResponseWriter, r *http.Request) {

@@ -18,7 +18,7 @@
 
 **Step 1: Initialize Go module**
 
-Run: `go mod init github.com/gary/pac-proxy`
+Run: `go mod init github.com/goodtune/pac-proxy`
 
 **Step 2: Create minimal main.go**
 
@@ -64,7 +64,7 @@ package metrics_test
 import (
 	"testing"
 
-	"github.com/gary/pac-proxy/internal/metrics"
+	"github.com/goodtune/pac-proxy/internal/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -245,7 +245,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gary/pac-proxy/internal/pac"
+	"github.com/goodtune/pac-proxy/internal/pac"
 )
 
 const testPAC = `
@@ -446,7 +446,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gary/pac-proxy/internal/logging"
+	"github.com/goodtune/pac-proxy/internal/logging"
 )
 
 func TestLogRequest(t *testing.T) {
@@ -595,7 +595,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gary/pac-proxy/internal/proxy"
+	"github.com/goodtune/pac-proxy/internal/proxy"
 )
 
 // mockEvaluator implements proxy.PACEvaluator for testing.
@@ -740,8 +740,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/gary/pac-proxy/internal/logging"
-	"github.com/gary/pac-proxy/internal/metrics"
+	"github.com/goodtune/pac-proxy/internal/logging"
+	"github.com/goodtune/pac-proxy/internal/metrics"
 )
 
 // Hop-by-hop headers that must not be forwarded.
@@ -934,7 +934,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gary/pac-proxy/internal/proxy"
+	"github.com/goodtune/pac-proxy/internal/proxy"
 )
 
 func TestConnectTunnelDirect(t *testing.T) {
@@ -1012,8 +1012,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gary/pac-proxy/internal/logging"
-	"github.com/gary/pac-proxy/internal/metrics"
+	"github.com/goodtune/pac-proxy/internal/logging"
+	"github.com/goodtune/pac-proxy/internal/metrics"
 )
 
 func (h *Handler) handleTunnel(w http.ResponseWriter, r *http.Request) {
@@ -1219,8 +1219,8 @@ package main
 import (
 	"testing"
 
-	"github.com/gary/pac-proxy/internal/pac"
-	"github.com/gary/pac-proxy/internal/proxy"
+	"github.com/goodtune/pac-proxy/internal/pac"
+	"github.com/goodtune/pac-proxy/internal/proxy"
 )
 
 func TestPacAdapter(t *testing.T) {
@@ -1252,10 +1252,10 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"github.com/gary/pac-proxy/internal/logging"
-	"github.com/gary/pac-proxy/internal/metrics"
-	"github.com/gary/pac-proxy/internal/pac"
-	"github.com/gary/pac-proxy/internal/proxy"
+	"github.com/goodtune/pac-proxy/internal/logging"
+	"github.com/goodtune/pac-proxy/internal/metrics"
+	"github.com/goodtune/pac-proxy/internal/pac"
+	"github.com/goodtune/pac-proxy/internal/proxy"
 )
 
 type pacAdapter struct {
@@ -1415,9 +1415,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gary/pac-proxy/internal/metrics"
-	"github.com/gary/pac-proxy/internal/pac"
-	"github.com/gary/pac-proxy/internal/proxy"
+	"github.com/goodtune/pac-proxy/internal/metrics"
+	"github.com/goodtune/pac-proxy/internal/pac"
+	"github.com/goodtune/pac-proxy/internal/proxy"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

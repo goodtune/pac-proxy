@@ -3,7 +3,7 @@ package metrics_test
 import (
 	"testing"
 
-	"github.com/gary/pac-proxy/internal/metrics"
+	"github.com/goodtune/pac-proxy/internal/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

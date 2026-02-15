@@ -6,7 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gary/pac-proxy/internal/proxy"
+	"github.com/goodtune/pac-proxy/internal/proxy"
 )
 
 // mockEvaluator implements proxy.PACEvaluator for testing.
