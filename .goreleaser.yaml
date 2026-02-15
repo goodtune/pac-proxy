@@ -10,9 +10,9 @@ builds:
 
 nfpms:
   - package_name: pac-proxy
-    vendor: ""
+    vendor: "Touch Technology"
     homepage: ""
-    maintainer: "pac-proxy maintainers"
+    maintainer: "Gary Reynolds"
     description: PAC-aware HTTP/HTTPS forward proxy server
     license: MIT
     formats:
