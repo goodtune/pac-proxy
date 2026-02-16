@@ -27,38 +27,47 @@ func writeTempPAC(t *testing.T, content string) string {
 	return path
 }
 
-func TestEvaluateDirect(t *testing.T) {
+func TestEvaluate(t *testing.T) {
 	path := writeTempPAC(t, testPAC)
 	e, err := pac.New(path)
 	if err != nil {
 		t.Fatalf("failed to create evaluator: %v", err)
 	}
 
-	result, err := e.Evaluate("http://direct.example.com/page", "direct.example.com")
-	if err != nil {
-		t.Fatalf("evaluate failed: %v", err)
+	tests := []struct {
+		name       string
+		url        string
+		host       string
+		wantDirect bool
+		wantProxy  string
+	}{
+		{
+			name:       "direct",
+			url:        "http://direct.example.com/page",
+			host:       "direct.example.com",
+			wantDirect: true,
+		},
+		{
+			name:      "proxy",
+			url:       "http://proxied.example.com/page",
+			host:      "proxied.example.com",
+			wantProxy: "squid.local:3128",
+		},
 	}
-	if !result.Direct {
-		t.Errorf("expected DIRECT, got proxy %q", result.ProxyAddress)
-	}
-}
 
-func TestEvaluateProxy(t *testing.T) {
-	path := writeTempPAC(t, testPAC)
-	e, err := pac.New(path)
-	if err != nil {
-		t.Fatalf("failed to create evaluator: %v", err)
-	}
-
-	result, err := e.Evaluate("http://proxied.example.com/page", "proxied.example.com")
-	if err != nil {
-		t.Fatalf("evaluate failed: %v", err)
-	}
-	if result.Direct {
-		t.Error("expected PROXY, got DIRECT")
-	}
-	if result.ProxyAddress != "squid.local:3128" {
-		t.Errorf("expected squid.local:3128, got %q", result.ProxyAddress)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := e.Evaluate(tt.url, tt.host)
+			if err != nil {
+				t.Fatalf("evaluate failed: %v", err)
+			}
+			if result.Direct != tt.wantDirect {
+				t.Errorf("Direct: got %v, want %v", result.Direct, tt.wantDirect)
+			}
+			if result.ProxyAddress != tt.wantProxy {
+				t.Errorf("ProxyAddress: got %q, want %q", result.ProxyAddress, tt.wantProxy)
+			}
+		})
 	}
 }
 
