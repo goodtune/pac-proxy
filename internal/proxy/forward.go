@@ -1,11 +1,11 @@
 package proxy
 
 import (
+	"context"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/goodtune/pac-proxy/internal/logging"
 	"github.com/goodtune/pac-proxy/internal/metrics"
@@ -23,53 +23,33 @@ var hopByHopHeaders = []string{
 	"Upgrade",
 }
 
-func (h *Handler) handleForward(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-	metrics.ActiveConnections.Inc()
-	defer metrics.ActiveConnections.Dec()
+// routeKey is the context key under which handleForward passes the Route
+// to the shared transport.
+type routeKey struct{}
 
-	host := r.Host
-	if host == "" {
-		host = r.URL.Host
+// proxyForRoute is the transport's Proxy func. It sends the request via the
+// upstream proxy of the Route in its context, or direct.
+func proxyForRoute(r *http.Request) (*url.URL, error) {
+	if route, ok := r.Context().Value(routeKey{}).(Route); ok && !route.Direct {
+		return &url.URL{Scheme: "http", Host: route.ProxyAddress}, nil
 	}
+	return nil, nil
+}
 
-	route, err := h.pac.Evaluate(r.URL.String(), hostOnly(host))
-	if err != nil {
-		h.logger.Error("PAC evaluation failed", "error", err, "host", host)
-		http.Error(w, "PAC evaluation error", http.StatusBadGateway)
-		return
-	}
-
-	routeLabel := "direct"
-	upstream := "direct"
-	if !route.Direct {
-		routeLabel = "forwarded"
-		upstream = route.ProxyAddress
-	}
-
-	// Build transport
-	transport := &http.Transport{}
-	if !route.Direct {
-		proxyURL := &url.URL{
-			Scheme: "http",
-			Host:   route.ProxyAddress,
-		}
-		transport.Proxy = http.ProxyURL(proxyURL)
-	}
-
+func (h *Handler) handleForward(w http.ResponseWriter, r *http.Request, route Route) (logging.RequestEntry, bool) {
 	// Clone the request for forwarding
-	outReq := r.Clone(r.Context())
+	outReq := r.Clone(context.WithValue(r.Context(), routeKey{}, route))
 	outReq.RequestURI = ""
 	removeHopByHop(outReq.Header)
 
-	resp, err := transport.RoundTrip(outReq)
+	resp, err := h.transport.RoundTrip(outReq)
 	if err != nil {
-		h.logger.Error("upstream request failed", "error", err, "upstream", upstream)
+		h.logger.Error("upstream request failed", "error", err, "upstream", route.upstream())
 		if !route.Direct {
-			metrics.UpstreamErrors.WithLabelValues(upstream).Inc()
+			metrics.UpstreamErrors.WithLabelValues(route.upstream()).Inc()
 		}
 		http.Error(w, "upstream error", http.StatusBadGateway)
-		return
+		return logging.RequestEntry{}, false
 	}
 	defer resp.Body.Close()
 
@@ -78,30 +58,11 @@ func (h *Handler) handleForward(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(resp.StatusCode)
 	bytesSent, _ := io.Copy(w, resp.Body)
 
-	duration := time.Since(start)
-	domain := hostOnly(host)
-
-	metrics.RequestsTotal.WithLabelValues(r.Method, domain, routeLabel).Inc()
-	metrics.RequestDuration.WithLabelValues(r.Method, routeLabel).Observe(duration.Seconds())
-	metrics.RequestsByDomain.WithLabelValues(domain, routeLabel).Inc()
-	metrics.BytesSent.WithLabelValues(routeLabel).Add(float64(bytesSent))
-
-	pacResult := "DIRECT"
-	if !route.Direct {
-		pacResult = "PROXY " + route.ProxyAddress
-	}
-
-	logging.LogRequest(h.logger, logging.RequestEntry{
-		ClientIP:   clientIP(r),
-		Method:     r.Method,
-		Host:       domain,
+	return logging.RequestEntry{
 		URL:        r.URL.String(),
-		PACResult:  pacResult,
-		Upstream:   upstream,
 		StatusCode: resp.StatusCode,
-		Duration:   duration,
 		BytesSent:  bytesSent,
-	})
+	}, true
 }
 
 func removeHopByHop(h http.Header) {
@@ -124,12 +85,4 @@ func hostOnly(hostport string) string {
 		return hostport
 	}
 	return h
-}
-
-func clientIP(r *http.Request) string {
-	host, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
-	}
-	return host
 }

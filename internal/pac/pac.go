@@ -32,23 +32,21 @@ func New(source string) (*Evaluator, error) {
 }
 
 // Evaluate runs FindProxyForURL and returns the first directive.
-func (e *Evaluator) Evaluate(url, host string) (Result, error) {
+func (e *Evaluator) Evaluate(url string) (Result, error) {
+	// The lock guards only the pointer; gpac.Parser serialises evaluation
+	// itself, so a reload need not wait for evaluations in flight.
 	e.mu.RLock()
-	defer e.mu.RUnlock()
+	parser := e.parser
+	e.mu.RUnlock()
 
-	proxies, err := e.parser.FindProxy(url)
+	proxies, err := parser.FindProxy(url)
 	if err != nil {
 		return Result{}, fmt.Errorf("FindProxy(%q): %w", url, err)
 	}
-	if len(proxies) == 0 {
+	if len(proxies) == 0 || proxies[0].IsDirect() {
 		return Result{Direct: true}, nil
 	}
-
-	first := proxies[0]
-	if first.IsDirect() {
-		return Result{Direct: true}, nil
-	}
-	return Result{ProxyAddress: first.Address}, nil
+	return Result{ProxyAddress: proxies[0].Address}, nil
 }
 
 // Reload reloads the PAC file from the original source.

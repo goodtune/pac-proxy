@@ -1,13 +1,10 @@
 package proxy_test
 
 import (
-	"bufio"
-	"crypto/tls"
-	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/goodtune/pac-proxy/internal/proxy"
@@ -21,47 +18,31 @@ func TestConnectTunnelDirect(t *testing.T) {
 	}))
 	defer origin.Close()
 
-	eval := &mockEvaluator{direct: true}
+	eval := &mockEvaluator{route: proxy.Route{Direct: true}}
 	handler := proxy.NewHandler(eval, nil)
 
 	// Start a proxy server
 	proxyServer := httptest.NewServer(handler)
 	defer proxyServer.Close()
 
-	// Send CONNECT to proxy
-	conn, err := net.Dial("tcp", proxyServer.Listener.Addr().String())
+	// A client that trusts the origin's certificate and sends CONNECT to the proxy
+	proxyURL, err := url.Parse(proxyServer.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer conn.Close()
+	client := origin.Client()
+	client.Transport.(*http.Transport).Proxy = http.ProxyURL(proxyURL)
 
-	// Extract host:port from origin
-	originAddr := origin.Listener.Addr().String()
-	fmt.Fprintf(conn, "CONNECT %s HTTP/1.1\r\nHost: %s\r\n\r\n", originAddr, originAddr)
-
-	br := bufio.NewReader(conn)
-	resp, err := http.ReadResponse(br, nil)
+	resp, err := client.Get(origin.URL)
 	if err != nil {
-		t.Fatalf("reading CONNECT response: %v", err)
+		t.Fatalf("request through tunnel failed: %v", err)
 	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != 200 {
-		t.Fatalf("CONNECT status: got %d, want 200", resp.StatusCode)
+		t.Errorf("status: got %d, want 200", resp.StatusCode)
 	}
-
-	// Wrap in TLS and make request
-	tlsConn := tls.Client(conn, &tls.Config{InsecureSkipVerify: true})
-	defer tlsConn.Close()
-
-	req, _ := http.NewRequest("GET", "/", nil)
-	req.Host = originAddr
-	req.Write(tlsConn)
-
-	resp2, err := http.ReadResponse(bufio.NewReader(tlsConn), req)
-	if err != nil {
-		t.Fatalf("reading tunneled response: %v", err)
-	}
-	defer resp2.Body.Close()
-	body, _ := io.ReadAll(resp2.Body)
+	body, _ := io.ReadAll(resp.Body)
 	if string(body) != "secure hello" {
 		t.Errorf("body: got %q, want %q", body, "secure hello")
 	}
