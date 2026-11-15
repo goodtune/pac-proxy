@@ -23,8 +23,8 @@ type pacAdapter struct {
 	eval *pac.Evaluator
 }
 
-func (a *pacAdapter) Evaluate(url, host string) (proxy.Route, error) {
-	result, err := a.eval.Evaluate(url, host)
+func (a *pacAdapter) Evaluate(url string) (proxy.Route, error) {
+	result, err := a.eval.Evaluate(url)
 	if err != nil {
 		return proxy.Route{}, err
 	}

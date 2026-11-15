@@ -11,15 +11,11 @@ import (
 
 // mockEvaluator implements proxy.PACEvaluator for testing.
 type mockEvaluator struct {
-	direct bool
-	addr   string
+	route proxy.Route
 }
 
-func (m *mockEvaluator) Evaluate(url, host string) (proxy.Route, error) {
-	if m.direct {
-		return proxy.Route{Direct: true}, nil
-	}
-	return proxy.Route{ProxyAddress: m.addr}, nil
+func (m *mockEvaluator) Evaluate(url string) (proxy.Route, error) {
+	return m.route, nil
 }
 
 func TestForward(t *testing.T) {
@@ -51,11 +47,11 @@ func TestForward(t *testing.T) {
 	}{
 		{
 			name: "direct",
-			eval: &mockEvaluator{direct: true},
+			eval: &mockEvaluator{route: proxy.Route{Direct: true}},
 		},
 		{
 			name: "via upstream",
-			eval: &mockEvaluator{addr: upstreamAddr},
+			eval: &mockEvaluator{route: proxy.Route{ProxyAddress: upstreamAddr}},
 		},
 	}
 
@@ -70,8 +66,7 @@ func TestForward(t *testing.T) {
 			if rec.Code != 200 {
 				t.Errorf("status: got %d, want 200", rec.Code)
 			}
-			body, _ := io.ReadAll(rec.Body)
-			if string(body) != "hello from origin" {
+			if body := rec.Body.String(); body != "hello from origin" {
 				t.Errorf("body: got %q, want %q", body, "hello from origin")
 			}
 		})

@@ -37,27 +37,24 @@ func TestEvaluate(t *testing.T) {
 	tests := []struct {
 		name       string
 		url        string
-		host       string
 		wantDirect bool
 		wantProxy  string
 	}{
 		{
 			name:       "direct",
 			url:        "http://direct.example.com/page",
-			host:       "direct.example.com",
 			wantDirect: true,
 		},
 		{
 			name:      "proxy",
 			url:       "http://proxied.example.com/page",
-			host:      "proxied.example.com",
 			wantProxy: "squid.local:3128",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := e.Evaluate(tt.url, tt.host)
+			result, err := e.Evaluate(tt.url)
 			if err != nil {
 				t.Fatalf("evaluate failed: %v", err)
 			}
@@ -88,7 +85,7 @@ func TestReload(t *testing.T) {
 		t.Fatalf("reload failed: %v", err)
 	}
 
-	result, err := e.Evaluate("http://proxied.example.com/page", "proxied.example.com")
+	result, err := e.Evaluate("http://proxied.example.com/page")
 	if err != nil {
 		t.Fatalf("evaluate failed: %v", err)
 	}

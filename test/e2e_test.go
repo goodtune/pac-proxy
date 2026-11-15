@@ -18,8 +18,8 @@ type e2eAdapter struct {
 	eval *pac.Evaluator
 }
 
-func (a *e2eAdapter) Evaluate(u, host string) (proxy.Route, error) {
-	result, err := a.eval.Evaluate(u, host)
+func (a *e2eAdapter) Evaluate(u string) (proxy.Route, error) {
+	result, err := a.eval.Evaluate(u)
 	if err != nil {
 		return proxy.Route{}, err
 	}

@@ -84,9 +84,7 @@ func All() []prometheus.Collector {
 
 // RegisterOn registers all metrics on the given registry.
 func RegisterOn(reg prometheus.Registerer) {
-	for _, c := range All() {
-		reg.MustRegister(c)
-	}
+	reg.MustRegister(All()...)
 }
 
 // Register registers all metrics on the default registry.

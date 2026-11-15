@@ -5,50 +5,32 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/goodtune/pac-proxy/internal/logging"
 	"github.com/goodtune/pac-proxy/internal/metrics"
 )
 
-func (h *Handler) handleTunnel(w http.ResponseWriter, r *http.Request) {
-	start := time.Now()
-	metrics.ActiveConnections.Inc()
-	defer metrics.ActiveConnections.Dec()
+const dialTimeout = 30 * time.Second
 
+func (h *Handler) handleTunnel(w http.ResponseWriter, r *http.Request, route Route) (logging.RequestEntry, bool) {
 	host := r.Host
-
-	// Synthesise URL for PAC evaluation per spec
-	pacURL := fmt.Sprintf("https://%s/", host)
-	route, err := h.pac.Evaluate(pacURL, hostOnly(host))
-	if err != nil {
-		h.logger.Error("PAC evaluation failed", "error", err, "host", host)
-		http.Error(w, "PAC evaluation error", http.StatusBadGateway)
-		return
-	}
-
-	routeLabel := "direct"
-	upstream := "direct"
-	if !route.Direct {
-		routeLabel = "forwarded"
-		upstream = route.ProxyAddress
-	}
 
 	// Dial the target (direct or via upstream proxy)
 	var targetConn net.Conn
+	var err error
 	if route.Direct {
-		targetConn, err = net.DialTimeout("tcp", host, 30*time.Second)
+		targetConn, err = net.DialTimeout("tcp", host, dialTimeout)
 	} else {
 		targetConn, err = dialViaUpstream(route.ProxyAddress, host)
 	}
 	if err != nil {
-		h.logger.Error("dial failed", "error", err, "target", host, "upstream", upstream)
+		h.logger.Error("dial failed", "error", err, "target", host, "upstream", route.upstream())
 		if !route.Direct {
-			metrics.UpstreamErrors.WithLabelValues(upstream).Inc()
+			metrics.UpstreamErrors.WithLabelValues(route.upstream()).Inc()
 		}
 		http.Error(w, "failed to connect", http.StatusBadGateway)
-		return
+		return logging.RequestEntry{}, false
 	}
 	defer targetConn.Close()
 
@@ -57,64 +39,43 @@ func (h *Handler) handleTunnel(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		h.logger.Error("hijack not supported")
 		http.Error(w, "hijack not supported", http.StatusInternalServerError)
-		return
+		return logging.RequestEntry{}, false
 	}
 	clientConn, _, err := hj.Hijack()
 	if err != nil {
 		h.logger.Error("hijack failed", "error", err)
-		return
+		return logging.RequestEntry{}, false
 	}
 	defer clientConn.Close()
 
 	// Send 200 Connection Established
 	clientConn.Write([]byte("HTTP/1.1 200 Connection Established\r\n\r\n"))
 
-	// Bidirectional copy
-	var wg sync.WaitGroup
-	var bytesSent, bytesRecv int64
-	wg.Add(2)
+	// Bidirectional copy: client to target in a goroutine, target to client here
+	var bytesRecv int64
+	done := make(chan struct{})
 	go func() {
-		defer wg.Done()
-		bytesSent, _ = io.Copy(clientConn, targetConn)
-	}()
-	go func() {
-		defer wg.Done()
+		defer close(done)
 		bytesRecv, _ = io.Copy(targetConn, clientConn)
 	}()
-	wg.Wait()
+	bytesSent, _ := io.Copy(clientConn, targetConn)
+	<-done
 
-	duration := time.Since(start)
-	domain := hostOnly(host)
+	// Only a tunnel measures bytes received; ServeHTTP records the rest.
+	metrics.BytesReceived.WithLabelValues(route.label()).Add(float64(bytesRecv))
 
-	metrics.RequestsTotal.WithLabelValues("CONNECT", domain, routeLabel).Inc()
-	metrics.RequestDuration.WithLabelValues("CONNECT", routeLabel).Observe(duration.Seconds())
-	metrics.RequestsByDomain.WithLabelValues(domain, routeLabel).Inc()
-	metrics.BytesSent.WithLabelValues(routeLabel).Add(float64(bytesSent))
-	metrics.BytesReceived.WithLabelValues(routeLabel).Add(float64(bytesRecv))
-
-	pacResult := "DIRECT"
-	if !route.Direct {
-		pacResult = "PROXY " + route.ProxyAddress
-	}
-
-	logging.LogRequest(h.logger, logging.RequestEntry{
-		ClientIP:   clientIP(r),
-		Method:     "CONNECT",
-		Host:       domain,
+	return logging.RequestEntry{
 		URL:        host,
-		PACResult:  pacResult,
-		Upstream:   upstream,
-		StatusCode: 200,
-		Duration:   duration,
+		StatusCode: http.StatusOK,
 		BytesSent:  bytesSent,
 		BytesRecv:  bytesRecv,
-	})
+	}, true
 }
 
 // dialViaUpstream connects to the target through an upstream HTTP proxy
 // by issuing a CONNECT request.
 func dialViaUpstream(proxyAddr, targetHost string) (net.Conn, error) {
-	conn, err := net.DialTimeout("tcp", proxyAddr, 30*time.Second)
+	conn, err := net.DialTimeout("tcp", proxyAddr, dialTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("dial upstream %s: %w", proxyAddr, err)
 	}
