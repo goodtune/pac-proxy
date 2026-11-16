@@ -19,6 +19,9 @@ import (
 	"github.com/goodtune/pac-proxy/internal/proxy"
 )
 
+// version is set at build time by GoReleaser via -ldflags.
+var version = "dev"
+
 type pacAdapter struct {
 	eval *pac.Evaluator
 }
@@ -37,7 +40,13 @@ func (a *pacAdapter) Evaluate(url string) (proxy.Route, error) {
 func main() {
 	listenAddr := flag.String("listen", ":3128", "proxy listen address")
 	metricsAddr := flag.String("metrics", ":9128", "metrics endpoint address")
+	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println(version)
+		return
+	}
 
 	// Setup logger
 	logger, err := logging.NewSyslogLogger()

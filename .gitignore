@@ -1,2 +1,8 @@
 .worktrees/
 /pac-proxy
+
+# GoReleaser output
+/dist/
+
+# macOS Finder metadata
+.DS_Store

@@ -11,7 +11,7 @@ go test ./... -v                     # Verbose test output
 go test ./... -race                  # With race detection
 go test ./internal/proxy/ -run TestHandleForward  # Run a single test
 go vet ./...                         # Lint
-goreleaser build --snapshot --clean  # Build RPM package
+goreleaser release --snapshot --clean --skip=publish  # Build archives and RPM/DEB/APK packages into dist/
 ```
 
 ## Running Locally
