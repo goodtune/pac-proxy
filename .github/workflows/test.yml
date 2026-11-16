@@ -24,27 +24,6 @@ jobs:
       - name: Run tests
         run: go test -race ./...
 
-      # internal/logging uses log/syslog, so Windows is not a target; this
-      # keeps the macOS release builds from breaking unnoticed.
-      - name: Cross-compile (darwin)
-        run: |
-          GOOS=darwin GOARCH=amd64 CGO_ENABLED=0 go build -o /dev/null ./cmd/pac-proxy
-          GOOS=darwin GOARCH=arm64 CGO_ENABLED=0 go build -o /dev/null ./cmd/pac-proxy
-
-      - name: Build binary
-        run: CGO_ENABLED=0 go build -o pac-proxy ./cmd/pac-proxy
-
-      - name: Verify binary runs
-        run: ./pac-proxy -version
-
-      - name: Verify packaged systemd unit
-        run: |
-          sudo install -m 0755 ./pac-proxy /usr/bin/pac-proxy
-          # Ubuntu has no /etc/sysconfig; the unit's EnvironmentFile needs it.
-          sudo mkdir -p /etc/sysconfig
-          sudo install -m 0644 packaging/pac.sysconfig /etc/sysconfig/pac
-          systemd-analyze verify packaging/pac-proxy.service
-
   goreleaser-check:
     name: GoReleaser snapshot
     runs-on: ubuntu-latest
@@ -64,3 +43,20 @@ jobs:
         with:
           version: latest
           args: release --snapshot --clean --skip=publish
+
+      # Check the binary GoReleaser built (the one that ships), not a
+      # separate local build.
+      - name: Verify binary runs
+        run: |
+          bin=$(find dist -path '*linux_amd64*' -name pac-proxy -type f | head -n 1)
+          test -n "$bin"
+          "$bin" -version
+          echo "BIN=$bin" >> "$GITHUB_ENV"
+
+      - name: Verify packaged systemd unit
+        run: |
+          sudo install -m 0755 "$BIN" /usr/bin/pac-proxy
+          # Ubuntu has no /etc/sysconfig; the unit's EnvironmentFile needs it.
+          sudo mkdir -p /etc/sysconfig
+          sudo install -m 0644 packaging/pac.sysconfig /etc/sysconfig/pac
+          systemd-analyze verify packaging/pac-proxy.service
