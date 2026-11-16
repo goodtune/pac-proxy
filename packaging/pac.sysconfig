@@ -1,2 +1,9 @@
 # PAC file path or URL (required)
 PAC_FILE=
+
+# Logs go to stderr (and so to the journal) unless OTLP export is set up.
+# Setting an endpoint sends them to an OpenTelemetry collector instead.
+#OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+#OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+#OTEL_SERVICE_NAME=pac-proxy
+#OTEL_RESOURCE_ATTRIBUTES=deployment.environment.name=production

@@ -1,0 +1,62 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [main, master]
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    name: Go unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Run tests
+        run: go test -race ./...
+
+  goreleaser-check:
+    name: GoReleaser snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+
+      # Builds every archive and package without publishing, so a broken
+      # .goreleaser.yaml or package script fails here rather than on release.
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v7
+        with:
+          version: latest
+          args: release --snapshot --clean --skip=publish
+
+      # Check the binary GoReleaser built (the one that ships), not a
+      # separate local build.
+      - name: Verify binary runs
+        run: |
+          bin=$(find dist -path '*linux_amd64*' -name pac-proxy -type f | head -n 1)
+          test -n "$bin"
+          "$bin" -version
+          echo "BIN=$bin" >> "$GITHUB_ENV"
+
+      - name: Verify packaged systemd unit
+        run: |
+          sudo install -m 0755 "$BIN" /usr/bin/pac-proxy
+          # Ubuntu has no /etc/sysconfig; the unit's EnvironmentFile needs it.
+          sudo mkdir -p /etc/sysconfig
+          sudo install -m 0644 packaging/pac.sysconfig /etc/sysconfig/pac
+          systemd-analyze verify packaging/pac-proxy.service

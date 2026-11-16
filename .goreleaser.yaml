@@ -3,20 +3,40 @@ version: 2
 builds:
   - main: ./cmd/pac-proxy
     binary: pac-proxy
-    goos:
-      - linux
-    goarch:
-      - amd64
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+    targets:
+      - linux_amd64
+      - linux_arm64
+      - darwin_amd64
+      - darwin_arm64
+      - windows_amd64
+      - windows_arm64
+
+archives:
+  - formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    files:
+      - LICENSE
 
 nfpms:
   - package_name: pac-proxy
     vendor: "Touch Technology"
-    homepage: ""
+    homepage: https://github.com/goodtune/pac-proxy
     maintainer: "Gary Reynolds"
     description: PAC-aware HTTP/HTTPS forward proxy server
     license: MIT
     formats:
       - rpm
+      - deb
+      - apk
+    bindir: /usr/bin
     contents:
       - src: packaging/pac-proxy.service
         dst: /usr/lib/systemd/system/pac-proxy.service
@@ -24,6 +44,17 @@ nfpms:
         dst: /etc/sysconfig/pac
         type: config|noreplace
     scripts:
-      postinstall: |
-        systemctl daemon-reload
-        systemctl enable pac-proxy.service
+      postinstall: packaging/scripts/postinstall.sh
+      preremove: packaging/scripts/preremove.sh
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"

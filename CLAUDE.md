@@ -11,7 +11,7 @@ go test ./... -v                     # Verbose test output
 go test ./... -race                  # With race detection
 go test ./internal/proxy/ -run TestHandleForward  # Run a single test
 go vet ./...                         # Lint
-goreleaser build --snapshot --clean  # Build RPM package
+goreleaser release --snapshot --clean --skip=publish  # Build archives and RPM/DEB/APK packages into dist/
 ```
 
 ## Running Locally
@@ -33,7 +33,7 @@ pac-proxy is a PAC-aware HTTP/HTTPS forward proxy. Clients connect to it, and it
 - **`internal/pac/`** — Loads PAC files (from path or URL), evaluates `FindProxyForURL()` using `gpac` (JS engine). Thread-safe via `sync.RWMutex`.
 - **`internal/proxy/`** — HTTP handler that routes `CONNECT` requests to `handleTunnel` and all other methods to `handleForward`. Uses a `PACEvaluator` interface for testability.
 - **`internal/metrics/`** — Prometheus metric definitions (requests, duration, bytes, active connections, PAC reloads, upstream errors). Served on `:9128/metrics`.
-- **`internal/logging/`** — Structured logging via `log/slog`. Writes JSON to syslog, or human-readable text when stderr is a TTY.
+- **`internal/logging/`** — Structured logging via `log/slog`. Exports over OTLP (via the OpenTelemetry `otelslog` bridge) when the standard `OTEL_*` environment configures it; otherwise writes to stderr, as text on a TTY and JSON elsewhere.
 - **`packaging/`** — systemd unit file and sysconfig template for RPM deployment.
 
 ### Key Patterns
@@ -47,3 +47,5 @@ pac-proxy is a PAC-aware HTTP/HTTPS forward proxy. Clients connect to it, and it
 - `PAC_FILE` env var (required) — path or URL to a PAC file
 - `-listen` flag — proxy address (default `:3128`)
 - `-metrics` flag — metrics address (default `:9128`)
+- `-version` flag — print the version and exit
+- `OTEL_EXPORTER_OTLP_ENDPOINT` (or `OTEL_EXPORTER_OTLP_LOGS_ENDPOINT`, or `OTEL_LOGS_EXPORTER=otlp`) — send logs to an OTLP collector; `OTEL_EXPORTER_OTLP_PROTOCOL` picks `http/protobuf` (default) or `grpc`
